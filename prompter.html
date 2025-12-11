@@ -3,171 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teleprompter Screen</title>
+    <title>Web Teleprompter</title>
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
     <style>
-        body {
-            background-color: #000;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            overflow: hidden; /* ซ่อน Scrollbar ปกติ */
+        body { margin: 0; font-family: 'Sarabun', sans-serif; overflow: hidden; }
+
+        /* --- 1. หน้าจอแก้ไข (Editor Screen) --- */
+        #editor-screen {
             display: flex;
             flex-direction: column;
             height: 100vh;
-        }
-        #setup-area {
-            text-align: center;
+            background: #f4f4f9;
             padding: 20px;
-            background: #222;
-            z-index: 1000;
+            box-sizing: border-box;
         }
-        #qr-container {
-            margin-top: 10px;
+        .toolbar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
             background: white;
-            padding: 10px;
-            display: inline-block;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            align-items: center;
+        }
+        textarea {
+            flex-grow: 1;
+            width: 100%;
+            padding: 20px;
+            font-size: 18px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            resize: none;
+            font-family: inherit;
+        }
+        button.start-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button.start-btn:hover { background-color: #218838; }
+
+        /* --- 2. หน้าจอแสดงผล (Prompter Screen) --- */
+        #prompter-screen {
+            display: none; /* ซ่อนไว้ก่อน */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #000;
+            color: #fff;
+            flex-direction: column;
+        }
+        #qr-overlay {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 2000;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        #qr-overlay button {
+            margin-top: 10px;
+            cursor: pointer;
+            padding: 5px 10px;
         }
         #prompter-container {
             flex-grow: 1;
             position: relative;
             overflow: hidden;
-            font-size: 50px; /* ขนาดตัวหนังสือเริ่มต้น */
-            line-height: 1.5;
-            padding: 50px;
-            box-sizing: border-box;
+            font-size: 60px; /* ขนาดเริ่มต้น */
+            line-height: 1.6;
+            padding: 0 100px; /* ขอบซ้ายขวา */
         }
         #scrolling-text {
             position: absolute;
-            top: 100%; /* เริ่มต้นซ่อนอยู่ข้างล่าง */
-            left: 50px;
-            right: 50px;
-            transition: transform 0.1s linear; /* การเคลื่อนไหว */
+            top: 100%;
+            left: 50px; right: 50px;
+            text-align: center; /* จัดกึ่งกลาง */
         }
-        /* เส้นนำสายตา */
         .guide-line {
             position: absolute;
-            top: 40%;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: red;
-            opacity: 0.3;
-            z-index: 10;
-            pointer-events: none;
+            top: 40%; left: 0; width: 100%; height: 2px;
+            background: red; opacity: 0.3; z-index: 10; pointer-events: none;
         }
-        /* กลับด้านกระจก */
-        .mirror {
-            transform: scaleX(-1);
-        }
+        .mirror { transform: scaleX(-1); }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <div id="setup-area">
-        <h2>📷 สแกนเพื่อเป็นรีโมท</h2>
-        <div id="qr-container">
-            <canvas id="qr-code"></canvas>
+    <div id="editor-screen">
+        <div class="toolbar">
+            <h2>📝 เตรียมบทพูด</h2>
+            <div style="flex-grow: 1;"></div> <label>ขนาดตัวอักษร: <input type="number" id="input-font-size" value="60" style="width: 50px;"> px</label>
+            <button class="start-btn" onclick="startPrompter()">🚀 เริ่มใช้งาน & สร้าง QR Code</button>
         </div>
-        <p>หรือเข้าลิงก์: <span id="remote-link" style="color: #4CAF50;"></span></p>
-        <p id="status" style="color: yellow;">กำลังเชื่อมต่อ Server...</p>
+        <textarea id="script-input" placeholder="พิมพ์หรือวางสคริปต์ของคุณที่นี่..."></textarea>
     </div>
 
-    <div class="guide-line"></div>
+    <div id="prompter-screen">
+        <div id="qr-overlay">
+            <canvas id="qr-code"></canvas>
+            <div id="room-info" style="color:black; margin-top:5px; font-weight:bold;"></div>
+            <button onclick="document.getElementById('qr-overlay').classList.add('hidden')">❌ ซ่อน QR</button>
+        </div>
 
-    <div id="prompter-container">
-        <div id="scrolling-text" contenteditable="true">
-            สวัสดีครับ...<br>
-            นี่คือระบบ Web Teleprompter<br>
-            ที่คุณสร้างขึ้นเอง!<br><br>
-            คุณสามารถแก้ไขข้อความตรงนี้ได้เลย<br>
-            แค่คลิกแล้วพิมพ์...<br><br>
-            ลองกดปุ่ม Play ที่รีโมทดูสิครับ<br>
-            ข้อความจะเลื่อนขึ้นไปเรื่อยๆ<br>
-            ขอให้สนุกกับการใช้งานครับ!
+        <div class="guide-line"></div>
+        
+        <div id="prompter-container">
+            <div id="scrolling-text"></div>
         </div>
     </div>
 
     <script>
         // --- การตั้งค่า ---
-        const BACKEND_URL = "https://teleprompter-09ku.onrender.com"; // URL ของคุณ
+        const BACKEND_URL = "https://teleprompter-09ku.onrender.com"; // URL เดิมของคุณ
         const socket = io(BACKEND_URL);
 
-        // สร้างรหัสห้องแบบสุ่ม 4 ตัว
-        const sessionId = Math.random().toString(36).substring(2, 6).toUpperCase();
-        
-        // สถานะการเลื่อน
+        let sessionId = Math.random().toString(36).substring(2, 6).toUpperCase();
         let isScrolling = false;
-        let scrollSpeed = 2; // ความเร็วเริ่มต้น
+        let scrollSpeed = 2;
         let currentPosition = 0;
         let animationFrameId;
 
-        const textElement = document.getElementById('scrolling-text');
-        const statusElement = document.getElementById('status');
+        // Elements
+        const editorScreen = document.getElementById('editor-screen');
+        const prompterScreen = document.getElementById('prompter-screen');
+        const scriptInput = document.getElementById('script-input');
+        const scrollingText = document.getElementById('scrolling-text');
+        const prompterContainer = document.getElementById('prompter-container');
 
-        // 1. เชื่อมต่อ Socket
-        socket.on('connect', () => {
-            statusElement.innerText = "✅ เชื่อมต่อ Server แล้ว | Room ID: " + sessionId;
-            socket.emit('join-session', sessionId);
+        // 1. ฟังก์ชันเริ่มใช้งาน (กดปุ่มเขียว)
+        function startPrompter() {
+            const text = scriptInput.value;
+            if (!text.trim()) return alert("กรุณาใส่ข้อความก่อนครับ");
 
-            // สร้าง Link สำหรับรีโมท (ลิงก์ไปยังไฟล์ remote.html ในโฟลเดอร์เดียวกัน)
-            // หมายเหตุ: window.location.href จะดึง URL ปัจจุบันมาตัดชื่อไฟล์ออก
+            // ตั้งค่าข้อความ (เปลี่ยน \n เป็น <br>)
+            scrollingText.innerHTML = text.replace(/\n/g, "<br>");
+            
+            // ตั้งค่าขนาดตัวอักษร
+            const fontSize = document.getElementById('input-font-size').value;
+            prompterContainer.style.fontSize = fontSize + "px";
+
+            // สลับหน้าจอ
+            editorScreen.style.display = "none";
+            prompterScreen.style.display = "flex";
+
+            // สร้าง QR Code
+            generateQRCode();
+        }
+
+        function generateQRCode() {
+            // สร้าง Link ไปยัง remote.html
             const currentPath = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
             const remoteUrl = `${currentPath}/remote.html?session=${sessionId}`;
             
-            document.getElementById('remote-link').innerText = remoteUrl;
+            document.getElementById('room-info').innerText = "Room: " + sessionId;
 
-            // สร้าง QR Code
             new QRious({
                 element: document.getElementById('qr-code'),
                 value: remoteUrl,
-                size: 150
+                size: 180
             });
+        }
+
+        // 2. การเชื่อมต่อ Socket
+        socket.on('connect', () => {
+            console.log("Connected to Server");
+            socket.emit('join-session', sessionId);
         });
 
-        // 2. ฟังก์ชันเลื่อนข้อความ
+        // 3. ระบบเลื่อนข้อความ (เหมือนเดิม)
         function scroll() {
             if (!isScrolling) return;
             currentPosition -= scrollSpeed;
-            textElement.style.top = currentPosition + 'px';
-            animationFrameId = requestAnimationFrame(scroll);
+            scrollingText.style.top = currentPosition + 'px';
+            
+            // เช็คว่าจบหรือยัง
+            if (currentPosition < -scrollingText.offsetHeight) {
+                isScrolling = false; // หยุดเมื่อข้อความหมด
+            } else {
+                animationFrameId = requestAnimationFrame(scroll);
+            }
         }
 
-        // 3. รับคำสั่งจากรีโมท
+        // 4. รับคำสั่งจากรีโมท
         socket.on('receive-command', (data) => {
             console.log("Command:", data);
             
             if (data.command === 'toggle') {
                 isScrolling = !isScrolling;
                 if (isScrolling) {
-                    // ถ้าเริ่มใหม่ ให้ตั้งค่าตำแหน่งเริ่มต้นถ้ายังไม่ได้เริ่ม
-                    if (currentPosition === 0) currentPosition = document.getElementById('prompter-container').offsetHeight;
+                    if (currentPosition === 0) currentPosition = prompterContainer.offsetHeight;
                     scroll();
                 } else {
                     cancelAnimationFrame(animationFrameId);
                 }
             } 
             else if (data.command === 'speed') {
-                // ปรับความเร็ว (data.value คือ -1 หรือ +1)
                 scrollSpeed += data.value;
-                if (scrollSpeed < 0) scrollSpeed = 0; // ห้ามติดลบ
+                if (scrollSpeed < 0) scrollSpeed = 0;
             }
             else if (data.command === 'reset') {
                 isScrolling = false;
                 cancelAnimationFrame(animationFrameId);
-                currentPosition = document.getElementById('prompter-container').offsetHeight; // รีเซ็ตไปข้างล่าง
-                textElement.style.top = '100%';
+                currentPosition = prompterContainer.offsetHeight;
+                scrollingText.style.top = '100%';
+                // โชว์ QR Code อีกครั้งเมื่อกด Reset เผื่อคนอยากเชื่อมต่อใหม่
+                document.getElementById('qr-overlay').classList.remove('hidden');
             }
             else if (data.command === 'mirror') {
-                document.getElementById('prompter-container').classList.toggle('mirror');
+                prompterContainer.classList.toggle('mirror');
             }
             else if (data.command === 'font-size') {
-                let currentSize = parseInt(window.getComputedStyle(document.getElementById('prompter-container')).fontSize);
-                document.getElementById('prompter-container').style.fontSize = (currentSize + (data.value * 5)) + 'px';
+                let currentSize = parseInt(window.getComputedStyle(prompterContainer).fontSize);
+                prompterContainer.style.fontSize = (currentSize + (data.value * 5)) + 'px';
             }
         });
-
     </script>
 </body>
 </html>
