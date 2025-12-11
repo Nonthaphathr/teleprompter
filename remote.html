@@ -3,167 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prompter Remote</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <title>Prompter Remote Thai</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <style>
+        * { box-sizing: border-box; }
         body {
-            margin: 0;
-            background-color: #000;
-            color: white;
-            font-family: 'Orbitron', sans-serif;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            user-select: none; /* ห้ามเลือกข้อความ */
+            margin: 0; background-color: #000; color: white;
+            font-family: 'Prompt', sans-serif;
+            height: 100dvh; /* ใช้ dynamic viewport height แก้จอล้น */
+            display: flex; flex-direction: column;
+            overflow: hidden; user-select: none;
         }
 
-        /* --- Header Status --- */
-        #status-bar {
-            height: 40px;
-            background: #111;
-            border-bottom: 1px solid #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: #666;
-            letter-spacing: 1px;
+        /* Tabs Selection */
+        .tabs {
+            display: flex; background: #111; border-bottom: 1px solid #333; height: 50px;
         }
-        .connected { color: #00ff41 !important; text-shadow: 0 0 5px #00ff41; }
-
-        /* --- Main Control Grid --- */
-        .grid-container {
-            flex-grow: 1;
-            display: grid;
-            grid-template-rows: 2fr 1fr; /* บน 2 ส่วน, ล่าง 1 ส่วน */
-            gap: 2px;
-            background: #222; /* สีเส้น Grid */
+        .tab-btn {
+            flex: 1; background: none; border: none; color: #666; font-family: 'Prompt';
+            font-size: 16px; cursor: pointer; border-bottom: 3px solid transparent;
         }
+        .tab-btn.active { color: #00ff41; border-bottom-color: #00ff41; background: #0a0a0a; }
 
-        /* Speed Zone (Top) */
-        .speed-zone {
-            display: grid;
-            grid-template-columns: 1fr 1fr; /* ซ้าย/ขวา */
-            gap: 2px;
+        /* Main Content Area */
+        .tab-content { display: none; flex-grow: 1; height: calc(100dvh - 50px); }
+        .tab-content.active { display: flex; flex-direction: column; }
+
+        /* --- Mode 1: General (Grid) --- */
+        .grid-layout {
+            display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr;
+            gap: 10px; padding: 10px; height: 100%;
         }
-
-        /* Function Zone (Bottom) */
-        .func-zone {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr; /* 3 ปุ่มล่าง */
-            gap: 2px;
-        }
-
-        /* Button Styling */
         .btn {
-            background: #0a0a0a;
-            border: none;
-            color: #444;
-            font-size: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.1s;
-            cursor: pointer;
-            text-transform: uppercase;
+            background: #222; border: 1px solid #444; border-radius: 10px;
+            color: white; font-size: 18px; font-family: 'Prompt';
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .btn span { font-size: 0.8rem; margin-top: 5px; opacity: 0.5; }
-        .btn i { font-size: 3rem; margin-bottom: 10px; font-style: normal; }
+        .btn:active { background: #444; transform: scale(0.98); }
+        .btn-play { grid-column: span 2; background: #003300; border-color: #00ff41; color: #00ff41; font-size: 24px; }
+        .btn-play.playing { background: #330000; border-color: red; color: red; }
 
-        /* Specific Colors */
-        .btn-slower { color: #ff9100; }
-        .btn-faster { color: #00f3ff; }
-        .btn-play { background: #111; color: #00ff41; border-top: 2px solid #00ff41; }
-        
-        /* Active State (Feedback) */
-        .btn:active { background: #222; transform: scale(0.98); }
-        .btn-slower:active { background: rgba(255, 145, 0, 0.2); color: white; }
-        .btn-faster:active { background: rgba(0, 243, 255, 0.2); color: white; }
-        .btn-play:active { background: rgba(0, 255, 65, 0.3); }
-
-        .btn-font { color: #e0e0e0; font-size: 1.2rem; }
-        
-        /* Play Button Special */
-        #play-icon::after { content: "▶"; }
-        .playing #play-icon::after { content: "⏸"; }
+        /* --- Mode 2: Speed Focus (Split) --- */
+        .split-layout { display: flex; height: 100%; }
+        .speed-pad {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; font-weight: bold; writing-mode: vertical-rl; text-orientation: upright;
+        }
+        .pad-slow { background: #221100; color: #ff9100; border-right: 1px solid #333; }
+        .pad-fast { background: #002222; color: #00f3ff; }
+        .pad-slow:active { background: #442200; }
+        .pad-fast:active { background: #004444; }
 
     </style>
 </head>
 <body>
 
-    <div id="status-bar" id="status-text">CONNECTING SYSTEM...</div>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('general')">🎛️ ทั่วไป</button>
+        <button class="tab-btn" onclick="switchTab('speed')">🚀 เน้นความเร็ว</button>
+    </div>
 
-    <div class="grid-container">
-        
-        <div class="speed-zone">
-            <button class="btn btn-slower" onclick="send('speed', -1)">
-                <i>🐢</i>
-                SLOWER
-            </button>
-            <button class="btn btn-faster" onclick="send('speed', 1)">
-                <i>🐇</i>
-                FASTER
-            </button>
-        </div>
-
-        <div class="func-zone">
-            <button class="btn btn-font" onclick="send('font-size', -1)">
-                <div style="font-size:20px;">A-</div>
-            </button>
+    <div id="tab-general" class="tab-content active">
+        <div class="grid-layout">
+            <button class="btn btn-play" id="play-btn" onclick="togglePlay()">⏯️ เล่น / หยุด</button>
             
-            <button class="btn btn-play" id="play-btn" onclick="togglePlay()">
-                <i id="play-icon"></i>
-                START/STOP
-            </button>
+            <button class="btn" onclick="send('speed', -1)">🐢 ช้าลง</button>
+            <button class="btn" onclick="send('speed', 1)">เร็วขึ้น 🐇</button>
+            
+            <button class="btn" onclick="send('font-size', -1)">ตัวเล็ก A-</button>
+            <button class="btn" onclick="send('font-size', 1)">ตัวใหญ่ A+</button>
 
-            <button class="btn btn-font" onclick="send('font-size', 1)">
-                <div style="font-size:30px;">A+</div>
-            </button>
+            <button class="btn" onclick="send('mirror')">🪞 กลับด้าน</button>
+            <button class="btn" onclick="send('reset')" style="color:red;">🔄 เริ่มใหม่</button>
         </div>
+    </div>
 
+    <div id="tab-speed" class="tab-content">
+        <div class="split-layout">
+            <div class="speed-pad pad-slow" onclick="send('speed', -1)">🐢 ลดความเร็ว</div>
+            <div class="speed-pad pad-fast" onclick="send('speed', 1)">🐇 เพิ่มความเร็ว</div>
+        </div>
+        <button onclick="togglePlay()" style="height: 80px; background:#111; color:white; border:none; border-top:1px solid #333; font-size:20px;">
+            ⏯️ หยุด / เล่น
+        </button>
     </div>
 
     <script>
-        const BACKEND_URL = "https://teleprompter-09ku.onrender.com"; // แก้เป็น URL ของคุณ
+        const BACKEND_URL = "https://teleprompter-09ku.onrender.com"; // แก้ URL
         const socket = io(BACKEND_URL);
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session');
-        const statusEl = document.getElementById('status-bar');
-
         let isPlaying = false;
 
+        // เชื่อมต่อ
         socket.on('connect', () => {
-            if (sessionId) {
-                socket.emit('join-session', sessionId);
-                statusEl.innerText = "CONNECTED: " + sessionId;
-                statusEl.classList.add('connected');
-            } else {
-                statusEl.innerText = "ERROR: NO SESSION ID";
-                statusEl.style.color = "red";
-            }
+            if (sessionId) socket.emit('join-session', sessionId);
         });
 
+        // ส่งคำสั่ง
         function send(cmd, val) {
             if (!sessionId) return;
-            
-            // Haptic Feedback (สั่นมือถือเบาๆ)
-            if (navigator.vibrate) navigator.vibrate(30);
-
-            socket.emit('send-command', {
-                sessionId: sessionId,
-                command: cmd,
-                value: val
-            });
+            if (navigator.vibrate) navigator.vibrate(30); // สั่น
+            socket.emit('send-command', { sessionId, command: cmd, value: val });
         }
 
+        // ปุ่ม Play
         function togglePlay() {
             isPlaying = !isPlaying;
+            document.getElementById('play-btn').innerText = isPlaying ? "⏸️ หยุดชั่วคราว" : "⏯️ เล่น / ต่อ";
             document.getElementById('play-btn').classList.toggle('playing', isPlaying);
             send('toggle');
-            if (navigator.vibrate) navigator.vibrate([30, 50, 30]); // สั่น 2 ทีเมื่อกด Play/Pause
+        }
+
+        // เปลี่ยน Tab
+        function switchTab(mode) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + mode).classList.add('active');
+            event.target.classList.add('active');
         }
     </script>
 </body>
