@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teleprompter Screen</title>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            overflow: hidden; /* ซ่อน Scrollbar ปกติ */
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #setup-area {
+            text-align: center;
+            padding: 20px;
+            background: #222;
+            z-index: 1000;
+        }
+        #qr-container {
+            margin-top: 10px;
+            background: white;
+            padding: 10px;
+            display: inline-block;
+        }
+        #prompter-container {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            font-size: 50px; /* ขนาดตัวหนังสือเริ่มต้น */
+            line-height: 1.5;
+            padding: 50px;
+            box-sizing: border-box;
+        }
+        #scrolling-text {
+            position: absolute;
+            top: 100%; /* เริ่มต้นซ่อนอยู่ข้างล่าง */
+            left: 50px;
+            right: 50px;
+            transition: transform 0.1s linear; /* การเคลื่อนไหว */
+        }
+        /* เส้นนำสายตา */
+        .guide-line {
+            position: absolute;
+            top: 40%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: red;
+            opacity: 0.3;
+            z-index: 10;
+            pointer-events: none;
+        }
+        /* กลับด้านกระจก */
+        .mirror {
+            transform: scaleX(-1);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="setup-area">
+        <h2>📷 สแกนเพื่อเป็นรีโมท</h2>
+        <div id="qr-container">
+            <canvas id="qr-code"></canvas>
+        </div>
+        <p>หรือเข้าลิงก์: <span id="remote-link" style="color: #4CAF50;"></span></p>
+        <p id="status" style="color: yellow;">กำลังเชื่อมต่อ Server...</p>
+    </div>
+
+    <div class="guide-line"></div>
+
+    <div id="prompter-container">
+        <div id="scrolling-text" contenteditable="true">
+            สวัสดีครับ...<br>
+            นี่คือระบบ Web Teleprompter<br>
+            ที่คุณสร้างขึ้นเอง!<br><br>
+            คุณสามารถแก้ไขข้อความตรงนี้ได้เลย<br>
+            แค่คลิกแล้วพิมพ์...<br><br>
+            ลองกดปุ่ม Play ที่รีโมทดูสิครับ<br>
+            ข้อความจะเลื่อนขึ้นไปเรื่อยๆ<br>
+            ขอให้สนุกกับการใช้งานครับ!
+        </div>
+    </div>
+
+    <script>
+        // --- การตั้งค่า ---
+        const BACKEND_URL = "https://teleprompter-09ku.onrender.com"; // URL ของคุณ
+        const socket = io(BACKEND_URL);
+
+        // สร้างรหัสห้องแบบสุ่ม 4 ตัว
+        const sessionId = Math.random().toString(36).substring(2, 6).toUpperCase();
+        
+        // สถานะการเลื่อน
+        let isScrolling = false;
+        let scrollSpeed = 2; // ความเร็วเริ่มต้น
+        let currentPosition = 0;
+        let animationFrameId;
+
+        const textElement = document.getElementById('scrolling-text');
+        const statusElement = document.getElementById('status');
+
+        // 1. เชื่อมต่อ Socket
+        socket.on('connect', () => {
+            statusElement.innerText = "✅ เชื่อมต่อ Server แล้ว | Room ID: " + sessionId;
+            socket.emit('join-session', sessionId);
+
+            // สร้าง Link สำหรับรีโมท (ลิงก์ไปยังไฟล์ remote.html ในโฟลเดอร์เดียวกัน)
+            // หมายเหตุ: window.location.href จะดึง URL ปัจจุบันมาตัดชื่อไฟล์ออก
+            const currentPath = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+            const remoteUrl = `${currentPath}/remote.html?session=${sessionId}`;
+            
+            document.getElementById('remote-link').innerText = remoteUrl;
+
+            // สร้าง QR Code
+            new QRious({
+                element: document.getElementById('qr-code'),
+                value: remoteUrl,
+                size: 150
+            });
+        });
+
+        // 2. ฟังก์ชันเลื่อนข้อความ
+        function scroll() {
+            if (!isScrolling) return;
+            currentPosition -= scrollSpeed;
+            textElement.style.top = currentPosition + 'px';
+            animationFrameId = requestAnimationFrame(scroll);
+        }
+
+        // 3. รับคำสั่งจากรีโมท
+        socket.on('receive-command', (data) => {
+            console.log("Command:", data);
+            
+            if (data.command === 'toggle') {
+                isScrolling = !isScrolling;
+                if (isScrolling) {
+                    // ถ้าเริ่มใหม่ ให้ตั้งค่าตำแหน่งเริ่มต้นถ้ายังไม่ได้เริ่ม
+                    if (currentPosition === 0) currentPosition = document.getElementById('prompter-container').offsetHeight;
+                    scroll();
+                } else {
+                    cancelAnimationFrame(animationFrameId);
+                }
+            } 
+            else if (data.command === 'speed') {
+                // ปรับความเร็ว (data.value คือ -1 หรือ +1)
+                scrollSpeed += data.value;
+                if (scrollSpeed < 0) scrollSpeed = 0; // ห้ามติดลบ
+            }
+            else if (data.command === 'reset') {
+                isScrolling = false;
+                cancelAnimationFrame(animationFrameId);
+                currentPosition = document.getElementById('prompter-container').offsetHeight; // รีเซ็ตไปข้างล่าง
+                textElement.style.top = '100%';
+            }
+            else if (data.command === 'mirror') {
+                document.getElementById('prompter-container').classList.toggle('mirror');
+            }
+            else if (data.command === 'font-size') {
+                let currentSize = parseInt(window.getComputedStyle(document.getElementById('prompter-container')).fontSize);
+                document.getElementById('prompter-container').style.fontSize = (currentSize + (data.value * 5)) + 'px';
+            }
+        });
+
+    </script>
+</body>
+</html>
