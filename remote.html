@@ -11,7 +11,7 @@
         body {
             margin: 0; background-color: #000; color: white;
             font-family: 'Prompt', sans-serif;
-            height: 100dvh; /* ใช้ dynamic viewport height แก้จอล้น */
+            height: 100dvh;
             display: flex; flex-direction: column;
             overflow: hidden; user-select: none;
         }
@@ -22,7 +22,7 @@
         }
         .tab-btn {
             flex: 1; background: none; border: none; color: #666; font-family: 'Prompt';
-            font-size: 16px; cursor: pointer; border-bottom: 3px solid transparent;
+            font-size: 14px; cursor: pointer; border-bottom: 3px solid transparent;
         }
         .tab-btn.active { color: #00ff41; border-bottom-color: #00ff41; background: #0a0a0a; }
 
@@ -55,15 +55,61 @@
         .pad-slow:active { background: #442200; }
         .pad-fast:active { background: #004444; }
 
+        /* --- Mode 3: Speed + Scroll (4-Zone Grid) --- */
+        .quad-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 40% 60%;
+            height: 100%;
+            gap: 0;
+        }
+        
+        .zone {
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: bold; border: 1px solid #111;
+        }
+        
+        .zone-slow {
+            background: #221100; color: #ff9100;
+        }
+        .zone-slow:active { background: #442200; }
+        
+        .zone-fast {
+            background: #002222; color: #00f3ff;
+        }
+        .zone-fast:active { background: #004444; }
+        
+        .zone-up {
+            background: #002200; color: #00ff41;
+            font-size: 32px;
+        }
+        .zone-up:active { background: #004400; }
+        
+        .zone-down {
+            background: #220022; color: #ff00ff;
+            font-size: 32px;
+        }
+        .zone-down:active { background: #440044; }
+
+        /* Play Button for Mode 2 & 3 */
+        .bottom-play-btn {
+            height: 70px; background:#111; color:white; border:none; 
+            border-top:1px solid #333; font-size:20px; cursor: pointer;
+            font-family: 'Prompt';
+        }
+        .bottom-play-btn:active { background: #222; }
+
     </style>
 </head>
 <body>
 
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('general')">🎛️ ทั่วไป</button>
-        <button class="tab-btn" onclick="switchTab('speed')">🚀 เน้นความเร็ว</button>
+        <button class="tab-btn" onclick="switchTab('speed')">🚀 ความเร็ว</button>
+        <button class="tab-btn" onclick="switchTab('quad')">🎮 เต็มรูป</button>
     </div>
 
+    <!-- โหมด 1: ทั่วไป -->
     <div id="tab-general" class="tab-content active">
         <div class="grid-layout">
             <button class="btn btn-play" id="play-btn" onclick="togglePlay()">⏯️ เล่น / หยุด</button>
@@ -79,18 +125,43 @@
         </div>
     </div>
 
+    <!-- โหมด 2: เน้นความเร็ว -->
     <div id="tab-speed" class="tab-content">
         <div class="split-layout">
             <div class="speed-pad pad-slow" onclick="send('speed', -1)">🐢 ลดความเร็ว</div>
             <div class="speed-pad pad-fast" onclick="send('speed', 1)">🐇 เพิ่มความเร็ว</div>
         </div>
-        <button onclick="togglePlay()" style="height: 80px; background:#111; color:white; border:none; border-top:1px solid #333; font-size:20px;">
+        <button class="bottom-play-btn" onclick="togglePlay()">
+            ⏯️ หยุด / เล่น
+        </button>
+    </div>
+
+    <!-- โหมด 3: ควบคุมเต็มรูปแบบ (4 โซน) -->
+    <div id="tab-quad" class="tab-content">
+        <div class="quad-layout">
+            <!-- แถวบน: เร็ว-ช้า -->
+            <div class="zone zone-slow" onclick="send('speed', -1)">
+                🐢<br>ช้าลง
+            </div>
+            <div class="zone zone-fast" onclick="send('speed', 1)">
+                🐇<br>เร็วขึ้น
+            </div>
+            
+            <!-- แถวล่าง: ขึ้น-ลง (ใหญ่กว่า) -->
+            <div class="zone zone-up" onclick="send('scroll', 50)">
+                ⬆️<br>เลื่อนขึ้น
+            </div>
+            <div class="zone zone-down" onclick="send('scroll', -50)">
+                ⬇️<br>เลื่อนลง
+            </div>
+        </div>
+        <button class="bottom-play-btn" onclick="togglePlay()">
             ⏯️ หยุด / เล่น
         </button>
     </div>
 
     <script>
-        const BACKEND_URL = "https://teleprompter-09ku.onrender.com"; // แก้ URL
+        const BACKEND_URL = "https://teleprompter-09ku.onrender.com";
         const socket = io(BACKEND_URL);
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session');
@@ -111,8 +182,11 @@
         // ปุ่ม Play
         function togglePlay() {
             isPlaying = !isPlaying;
-            document.getElementById('play-btn').innerText = isPlaying ? "⏸️ หยุดชั่วคราว" : "⏯️ เล่น / ต่อ";
-            document.getElementById('play-btn').classList.toggle('playing', isPlaying);
+            const playBtn = document.getElementById('play-btn');
+            if (playBtn) {
+                playBtn.innerText = isPlaying ? "⏸️ หยุดชั่วคราว" : "⏯️ เล่น / ต่อ";
+                playBtn.classList.toggle('playing', isPlaying);
+            }
             send('toggle');
         }
 
