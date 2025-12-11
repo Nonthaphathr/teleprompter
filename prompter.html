@@ -167,7 +167,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
         }
         
         .pc-btn {
@@ -237,7 +238,7 @@
         </div>
 
         <div class="shortcut-info">
-            ⌨️ <b>คีย์บอร์ด:</b> Spacebar=เล่น/หยุด | ลูกศรขึ้น/ลง=ปรับความเร็ว
+            ⌨️ <b>คีย์บอร์ด:</b> Spacebar=เล่น/หยุด | ลูกศรขึ้น/ลง=ปรับความเร็ว | ← →=เลื่อนข้อความ
         </div>
 
         <div id="pc-controls">
@@ -245,14 +246,21 @@
             <button class="pc-btn" id="play-btn-pc" onclick="toggleScroll()">⏯ เล่น / หยุด</button>
             <button class="pc-btn" onclick="adjustSpeed(0.25)">🐇 เร็วขึ้น</button>
             <div style="color:var(--neon-blue); width: 100px; text-align:center;" id="speed-disp">ความเร็ว: 2.0</div>
-            <div style="width: 20px;"></div>
+            
+            <div style="width: 10px;"></div>
+            
+            <button class="pc-btn" onclick="scrollManual(50)">⬆️ เลื่อนขึ้น</button>
+            <button class="pc-btn" onclick="scrollManual(-50)">⬇️ เลื่อนลง</button>
+            
+            <div style="width: 10px;"></div>
+            
             <button class="pc-btn" onclick="resetPrompter()">🔄 เริ่มใหม่</button>
             <button class="pc-btn" onclick="exitPrompter()" style="border-color: red; color: red;">❌ ออก</button>
         </div>
     </div>
 
     <script>
-        const BACKEND_URL = "https://teleprompter-09ku.onrender.com"; // ตรวจสอบ URL อีกครั้ง
+        const BACKEND_URL = "https://teleprompter-09ku.onrender.com";
         const socket = io(BACKEND_URL);
         const sessionId = Math.random().toString(36).substring(2, 6).toUpperCase();
 
@@ -337,6 +345,20 @@
             document.getElementById('speed-disp').innerText = "ความเร็ว: " + scrollSpeed.toFixed(2);
         }
 
+        // ฟังก์ชันเลื่อนขึ้น-ลงแบบ Manual (ใช้ได้ทั้งตอน run และหยุด)
+        function scrollManual(pixels) {
+            currentPosition += pixels;
+            
+            // จำกัดไม่ให้เลื่อนเกินขอบเขต
+            const maxPosition = document.getElementById('prompter-container').offsetHeight;
+            const minPosition = -document.getElementById('scrolling-text').offsetHeight;
+            
+            if (currentPosition > maxPosition) currentPosition = maxPosition;
+            if (currentPosition < minPosition) currentPosition = minPosition;
+            
+            document.getElementById('scrolling-text').style.top = currentPosition + 'px';
+        }
+
         function resetPrompter() {
             isScrolling = false;
             cancelAnimationFrame(animationFrameId);
@@ -350,6 +372,7 @@
             if (data.command === 'toggle') toggleScroll();
             if (data.command === 'speed') adjustSpeed(data.value * 0.25);
             if (data.command === 'reset') resetPrompter();
+            if (data.command === 'scroll') scrollManual(data.value);
             if (data.command === 'font-size') {
                 let el = document.getElementById('prompter-container');
                 let size = parseInt(window.getComputedStyle(el).fontSize);
@@ -366,6 +389,8 @@
                 if(e.code === 'Space') { e.preventDefault(); toggleScroll(); }
                 if(e.code === 'ArrowUp') { e.preventDefault(); adjustSpeed(0.25); }
                 if(e.code === 'ArrowDown') { e.preventDefault(); adjustSpeed(-0.25); }
+                if(e.code === 'ArrowLeft') { e.preventDefault(); scrollManual(30); }
+                if(e.code === 'ArrowRight') { e.preventDefault(); scrollManual(-30); }
             }
         });
     </script>
