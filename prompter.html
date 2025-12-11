@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teleprompter X - Tech Edition</title>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <title>Teleprompter Pro - Thai Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
     
     <style>
         :root {
-            --bg-dark: #050505;
-            --bg-panel: #111111;
+            --bg-dark: #0a0a0a;
+            --bg-panel: #141414;
             --neon-green: #00ff41;
             --neon-blue: #00f3ff;
             --text-main: #e0e0e0;
@@ -26,7 +26,7 @@
             overflow: hidden;
         }
 
-        /* --- Editor Screen --- */
+        /* --- หน้าจอแก้ไข (Editor) --- */
         #editor-screen {
             display: flex;
             flex-direction: column;
@@ -41,30 +41,20 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 0;
             border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
             margin-bottom: 20px;
         }
 
-        h1 { 
-            margin: 0; 
-            font-family: 'Orbitron', sans-serif; 
-            color: var(--neon-blue); 
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            font-size: 1.8rem;
-        }
-
+        h1 { margin: 0; color: var(--neon-blue); font-size: 1.8rem; }
         .visitor-badge {
-            font-family: 'Orbitron', sans-serif;
             color: var(--neon-green);
             background: rgba(0, 255, 65, 0.1);
-            padding: 8px 15px;
+            padding: 5px 15px;
             border: 1px solid var(--neon-green);
             border-radius: 4px;
         }
 
-        /* Editor Box */
         .editor-wrapper {
             flex-grow: 1;
             background: var(--bg-panel);
@@ -79,38 +69,32 @@
             background: #1a1a1a;
             padding: 10px;
             display: flex;
-            gap: 10px;
+            gap: 15px;
+            align-items: center;
             border-bottom: 1px solid var(--border-color);
         }
 
+        /* ปุ่มสี */
         .color-btn {
-            width: 30px;
-            height: 30px;
+            width: 35px; height: 35px;
             border-radius: 50%;
             border: 2px solid #555;
             cursor: pointer;
             transition: transform 0.2s;
         }
-        .color-btn:hover { transform: scale(1.2); border-color: white; }
+        .color-btn:hover { transform: scale(1.1); border-color: white; }
 
-        /* เปลี่ยนจาก Textarea เป็น Div contenteditable เพื่อรองรับสี */
         #script-input {
             flex-grow: 1;
             padding: 30px;
-            font-size: 20px;
+            font-size: 24px;
             outline: none;
             overflow-y: auto;
             color: white;
             line-height: 1.6;
-            white-space: pre-wrap; /* รักษารูปแบบบรรทัด */
-        }
-        /* Placeholder จำลอง */
-        #script-input:empty:before {
-            content: attr(placeholder);
-            color: #555;
+            white-space: pre-wrap;
         }
 
-        /* Bottom Controls */
         .bottom-controls {
             margin-top: 20px;
             display: flex;
@@ -120,55 +104,28 @@
         }
 
         .setting-box {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: var(--bg-panel);
-            padding: 10px 20px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
+            display: flex; align-items: center; gap: 10px;
+            background: var(--bg-panel); padding: 10px 20px;
+            border: 1px solid var(--border-color); border-radius: 4px;
         }
         
         input[type="number"] {
-            background: black;
-            border: 1px solid #555;
-            color: var(--neon-blue);
-            padding: 5px;
-            width: 60px;
-            text-align: center;
-            font-family: 'Orbitron', sans-serif;
+            background: black; border: 1px solid #555; color: var(--neon-blue);
+            padding: 5px; width: 60px; text-align: center; font-size: 18px;
         }
 
         button.start-btn {
-            background: transparent;
-            color: var(--neon-green);
-            border: 2px solid var(--neon-green);
-            padding: 12px 40px;
-            font-size: 18px;
-            font-family: 'Orbitron', sans-serif;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 0 10px rgba(0,255,65,0.1);
+            background: var(--neon-green); color: black; border: none;
+            padding: 12px 40px; font-size: 18px; font-weight: bold;
+            cursor: pointer; transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(0,255,65,0.3);
         }
-        button.start-btn:hover {
-            background: var(--neon-green);
-            color: black;
-            box-shadow: 0 0 20px rgba(0,255,65,0.5);
-        }
+        button.start-btn:hover { transform: translateY(-2px); box-shadow: 0 0 25px rgba(0,255,65,0.6); }
 
-        footer {
-            text-align: center;
-            margin-top: 20px;
-            color: #666;
-            font-size: 0.8rem;
-        }
-
-        /* --- Prompter Screen --- */
+        /* --- หน้าจอ Teleprompter --- */
         #prompter-screen {
             display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: #000;
             flex-direction: column;
             z-index: 1000;
@@ -184,94 +141,93 @@
         }
 
         #scrolling-text {
-            position: absolute;
-            top: 100%;
-            left: 0; right: 0;
-            text-align: center;
-            color: white; /* สีเริ่มต้น */
+            position: absolute; top: 100%; left: 0; right: 0;
+            text-align: center; color: white;
         }
 
         .guide-line {
-            position: absolute;
-            top: 40%; left: 0; width: 100%; height: 2px;
+            position: absolute; top: 40%; left: 0; width: 100%; height: 2px;
             background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
             z-index: 10;
         }
         
-        /* QR Card Tech Style */
+        /* QR Card */
         #qr-card {
             position: absolute; top: 20px; right: 20px;
-            background: rgba(10, 10, 10, 0.95);
-            padding: 20px;
-            border: 1px solid var(--neon-blue);
-            text-align: center;
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
-            z-index: 2000;
-            color: var(--neon-blue);
+            background: rgba(20, 20, 20, 0.95);
+            padding: 20px; border: 1px solid var(--neon-blue);
+            text-align: center; z-index: 2000; border-radius: 10px;
         }
-        #qr-card h3 { font-family: 'Orbitron'; margin: 0 0 10px 0; font-size: 0.9rem; }
         
+        /* แผงควบคุมด้านล่าง (PC Control) */
+        #pc-controls {
+            background: #111;
+            border-top: 2px solid var(--neon-blue);
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .pc-btn {
+            background: #333; color: white; border: 1px solid #555;
+            padding: 10px 20px; cursor: pointer; font-family: 'Prompt';
+            border-radius: 5px; font-size: 16px;
+        }
+        .pc-btn:hover { background: #444; border-color: var(--neon-blue); }
+        .pc-btn.active { background: var(--neon-green); color: black; border-color: var(--neon-green); }
+
+        .shortcut-info {
+            position: absolute; bottom: 80px; left: 20px;
+            color: #666; font-size: 14px; background: rgba(0,0,0,0.7);
+            padding: 10px; border-radius: 5px; pointer-events: none;
+        }
+
         .mirror { transform: scaleX(-1); }
         .hidden { display: none !important; }
-
-        /* On Screen Controls */
-        #control-bar {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            background: rgba(0,0,0,0.8); border-top: 1px solid #333;
-            display: flex; justify-content: center; gap: 15px; padding: 15px;
-            transform: translateY(100%); transition: transform 0.3s;
-        }
-        #prompter-screen:hover #control-bar { transform: translateY(0); }
-        
-        .ctrl-btn {
-            background: #222; border: 1px solid #444; color: #fff;
-            padding: 8px 15px; cursor: pointer; font-family: 'Prompt';
-        }
-        .ctrl-btn:hover { border-color: var(--neon-blue); color: var(--neon-blue); }
-
     </style>
 </head>
 <body>
 
     <div id="editor-screen">
         <header>
-            <h1>Teleprompter <span style="font-size:0.5em; vertical-align:super;">X</span></h1>
-            <div class="visitor-badge">ONLINE: <span id="visit-count">...</span></div>
+            <h1>TELEPROMPTER <span style="font-size:0.5em;">THAI VERSION</span></h1>
+            <div class="visitor-badge">กำลังใช้งาน: <span id="visit-count">...</span></div>
         </header>
 
         <div class="editor-wrapper">
             <div class="toolbar-top">
-                <span style="color:#666; font-size:0.9rem; align-self:center; margin-right:10px;">HIGHLIGHT COLOR:</span>
-                <div class="color-btn" style="background:white;" onclick="setColor('white')" title="White"></div>
-                <div class="color-btn" style="background:#ffeb3b;" onclick="setColor('#ffeb3b')" title="Yellow"></div>
-                <div class="color-btn" style="background:#00ff41;" onclick="setColor('#00ff41')" title="Neon Green"></div>
-                <div class="color-btn" style="background:#00f3ff;" onclick="setColor('#00f3ff')" title="Neon Blue"></div>
-                <div class="color-btn" style="background:#ff0055;" onclick="setColor('#ff0055')" title="Neon Red"></div>
-                <div class="color-btn" style="background:#ff9100;" onclick="setColor('#ff9100')" title="Orange"></div>
+                <span style="color:#aaa;">เลือกสีข้อความ:</span>
+                <div class="color-btn" style="background:white;" onmousedown="event.preventDefault(); setColor('white')" title="สีขาว"></div>
+                <div class="color-btn" style="background:#ffeb3b;" onmousedown="event.preventDefault(); setColor('#ffeb3b')" title="สีเหลือง"></div>
+                <div class="color-btn" style="background:#00ff41;" onmousedown="event.preventDefault(); setColor('#00ff41')" title="สีเขียว"></div>
+                <div class="color-btn" style="background:#00f3ff;" onmousedown="event.preventDefault(); setColor('#00f3ff')" title="สีฟ้า"></div>
+                <div class="color-btn" style="background:#ff0055;" onmousedown="event.preventDefault(); setColor('#ff0055')" title="สีแดง"></div>
             </div>
 
-            <div id="script-input" contenteditable="true" placeholder="พิมพ์บทพูดที่นี่... ลากคลุมข้อความแล้วเลือกสีด้านบนเพื่อเน้นคำ"></div>
+            <div id="script-input" contenteditable="true" placeholder="1. พิมพ์บทพูดที่นี่...&#10;2. ลากคลุมคำที่ต้องการเน้น แล้วกดปุ่มสีด้านบน&#10;3. กดปุ่ม 'เริ่มระบบ' ด้านล่าง"></div>
         </div>
 
         <div class="bottom-controls">
             <div class="setting-box">
-                <label style="color:#888;">FONT SIZE</label>
+                <label>ขนาดตัวอักษรเริ่มต้น:</label>
                 <input type="number" id="input-font-size" value="70">
             </div>
-            <button class="start-btn" onclick="startPrompter()">INITIALIZE SYSTEM</button>
+            <button class="start-btn" onclick="startPrompter()">เริ่มระบบ (START)</button>
         </div>
-
-        <footer>
-            SYSTEM DEVELOPED BY <strong>KRU NONTHAPHATH HIRUNRUANG</strong>
+        
+        <footer style="text-align: center; margin-top: 15px; color: #555;">
+            พัฒนาโดย ครูนนทพัทธ์ หิรัญเรือง
         </footer>
     </div>
 
     <div id="prompter-screen">
         <div id="qr-card">
-            <h3>REMOTE ACCESS</h3>
+            <h3 style="margin:0 0 10px; color:var(--neon-blue);">สแกนเพื่อใช้รีโมท</h3>
             <canvas id="qr-code"></canvas>
-            <div style="margin-top:10px; font-size:12px; font-family:'Orbitron'; letter-spacing:1px;">ID: <span id="room-id-disp"></span></div>
-            <button onclick="document.getElementById('qr-card').classList.add('hidden')" style="margin-top:10px; background:transparent; border:1px solid #555; color:#666; cursor:pointer;">HIDE</button>
+            <div style="margin-top:5px; color:#888;">ห้อง: <span id="room-id-disp"></span></div>
+            <button onclick="document.getElementById('qr-card').classList.add('hidden')" style="margin-top:10px; cursor:pointer;">ซ่อน</button>
         </div>
 
         <div class="guide-line"></div>
@@ -280,15 +236,23 @@
             <div id="scrolling-text"></div>
         </div>
 
-        <div id="control-bar">
-            <button class="ctrl-btn" onclick="toggleScroll()">Play/Pause</button>
-            <span id="speed-disp" style="color:var(--neon-blue); align-self:center;">SPD: 2.0</span>
-            <button class="ctrl-btn" onclick="exitPrompter()" style="color:#ff0055; border-color:#ff0055;">EXIT SYSTEM</button>
+        <div class="shortcut-info">
+            ⌨️ <b>คีย์บอร์ด:</b> Spacebar=เล่น/หยุด | ลูกศรขึ้น/ลง=ปรับความเร็ว
+        </div>
+
+        <div id="pc-controls">
+            <button class="pc-btn" onclick="adjustSpeed(-0.25)">🐢 ช้าลง</button>
+            <button class="pc-btn" id="play-btn-pc" onclick="toggleScroll()">⏯ เล่น / หยุด</button>
+            <button class="pc-btn" onclick="adjustSpeed(0.25)">🐇 เร็วขึ้น</button>
+            <div style="color:var(--neon-blue); width: 100px; text-align:center;" id="speed-disp">ความเร็ว: 2.0</div>
+            <div style="width: 20px;"></div>
+            <button class="pc-btn" onclick="resetPrompter()">🔄 เริ่มใหม่</button>
+            <button class="pc-btn" onclick="exitPrompter()" style="border-color: red; color: red;">❌ ออก</button>
         </div>
     </div>
 
     <script>
-        const BACKEND_URL = "https://teleprompter-09ku.onrender.com"; // แก้เป็น URL ของคุณ
+        const BACKEND_URL = "https://teleprompter-09ku.onrender.com"; // ตรวจสอบ URL อีกครั้ง
         const socket = io(BACKEND_URL);
         const sessionId = Math.random().toString(36).substring(2, 6).toUpperCase();
 
@@ -297,14 +261,14 @@
         let currentPosition = 0;
         let animationFrameId;
 
-        // --- Editor Logic ---
+        // --- Editor Functions ---
         function setColor(color) {
             document.execCommand('foreColor', false, color);
         }
 
         function startPrompter() {
-            const content = document.getElementById('script-input').innerHTML; // ดึง HTML เพื่อเอาสีไปด้วย
-            if (!document.getElementById('script-input').innerText.trim()) return alert("WARNING: NO DATA INPUT");
+            const content = document.getElementById('script-input').innerHTML;
+            if (!document.getElementById('script-input').innerText.trim()) return alert("กรุณาใส่ข้อความก่อนครับ");
 
             document.getElementById('scrolling-text').innerHTML = content;
             document.getElementById('prompter-container').style.fontSize = document.getElementById('input-font-size').value + "px";
@@ -312,16 +276,15 @@
             document.getElementById('editor-screen').style.display = 'none';
             document.getElementById('prompter-screen').style.display = 'flex';
 
-            // Gen QR
+            // QR Gen
             const currentPath = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
             const remoteUrl = `${currentPath}/remote.html?session=${sessionId}`;
             document.getElementById('room-id-disp').innerText = sessionId;
-            new QRious({ element: document.getElementById('qr-code'), value: remoteUrl, size: 160 });
+            new QRious({ element: document.getElementById('qr-code'), value: remoteUrl, size: 150 });
 
-            // Reset Position
+            // Reset
             setTimeout(() => {
-                currentPosition = document.getElementById('prompter-container').offsetHeight;
-                document.getElementById('scrolling-text').style.top = currentPosition + 'px';
+                resetPrompter();
             }, 100);
         }
 
@@ -330,9 +293,10 @@
             cancelAnimationFrame(animationFrameId);
             document.getElementById('prompter-screen').style.display = 'none';
             document.getElementById('editor-screen').style.display = 'flex';
+            document.getElementById('qr-card').classList.remove('hidden');
         }
 
-        // --- Socket Logic ---
+        // --- Socket ---
         socket.on('connect', () => {
             socket.emit('join-session', sessionId);
         });
@@ -340,49 +304,68 @@
             document.getElementById('visit-count').innerText = count;
         });
 
-        // --- Scroll Logic ---
+        // --- Core Logic ---
         function toggleScroll() {
             isScrolling = !isScrolling;
-            if(isScrolling) scrollLoop();
-            else cancelAnimationFrame(animationFrameId);
+            document.getElementById('play-btn-pc').classList.toggle('active', isScrolling);
+            if(isScrolling) {
+                if(currentPosition <= -document.getElementById('scrolling-text').offsetHeight) {
+                    currentPosition = document.getElementById('prompter-container').offsetHeight;
+                }
+                scrollLoop();
+            } else {
+                cancelAnimationFrame(animationFrameId);
+            }
         }
 
         function scrollLoop() {
             if (!isScrolling) return;
             currentPosition -= scrollSpeed;
             document.getElementById('scrolling-text').style.top = currentPosition + 'px';
-            if (currentPosition < -document.getElementById('scrolling-text').offsetHeight) isScrolling = false;
-            else animationFrameId = requestAnimationFrame(scrollLoop);
+            
+            if (currentPosition < -document.getElementById('scrolling-text').offsetHeight) {
+                isScrolling = false;
+                document.getElementById('play-btn-pc').classList.remove('active');
+            } else {
+                animationFrameId = requestAnimationFrame(scrollLoop);
+            }
         }
 
         function adjustSpeed(val) {
             scrollSpeed += val;
             if (scrollSpeed < 0) scrollSpeed = 0;
-            document.getElementById('speed-disp').innerText = "SPD: " + scrollSpeed.toFixed(2);
+            document.getElementById('speed-disp').innerText = "ความเร็ว: " + scrollSpeed.toFixed(2);
         }
 
-        // --- Remote Command Handler ---
+        function resetPrompter() {
+            isScrolling = false;
+            cancelAnimationFrame(animationFrameId);
+            document.getElementById('play-btn-pc').classList.remove('active');
+            currentPosition = document.getElementById('prompter-container').offsetHeight;
+            document.getElementById('scrolling-text').style.top = currentPosition + 'px';
+        }
+
+        // --- Remote Listener ---
         socket.on('receive-command', (data) => {
             if (data.command === 'toggle') toggleScroll();
             if (data.command === 'speed') adjustSpeed(data.value * 0.25);
-            if (data.command === 'reset') {
-                isScrolling = false;
-                currentPosition = document.getElementById('prompter-container').offsetHeight;
-                document.getElementById('scrolling-text').style.top = currentPosition + 'px';
-            }
+            if (data.command === 'reset') resetPrompter();
             if (data.command === 'font-size') {
                 let el = document.getElementById('prompter-container');
                 let size = parseInt(window.getComputedStyle(el).fontSize);
                 el.style.fontSize = (size + (data.value * 5)) + "px";
             }
+            if (data.command === 'mirror') {
+                document.getElementById('prompter-container').classList.toggle('mirror');
+            }
         });
-        
-        // Keyboard
+
+        // --- Keyboard ---
         window.addEventListener('keydown', (e) => {
             if(document.getElementById('prompter-screen').style.display === 'flex') {
                 if(e.code === 'Space') { e.preventDefault(); toggleScroll(); }
-                if(e.code === 'ArrowUp') adjustSpeed(0.25);
-                if(e.code === 'ArrowDown') adjustSpeed(-0.25);
+                if(e.code === 'ArrowUp') { e.preventDefault(); adjustSpeed(0.25); }
+                if(e.code === 'ArrowDown') { e.preventDefault(); adjustSpeed(-0.25); }
             }
         });
     </script>
