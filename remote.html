@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Teleprompter Remote</title>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+            justify-content: center;
+        }
+        button {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 20px;
+            margin: 10px;
+            font-size: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            touch-action: manipulation; /* ลด delay บนมือถือ */
+        }
+        button:active { background: #555; }
+        .btn-large {
+            background: #4CAF50;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 30px;
+        }
+        .row { display: flex; justify-content: center; gap: 10px; }
+        .status { color: #888; font-size: 14px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <h2>📱 Remote Control</h2>
+    <div id="status" class="status">กำลังเชื่อมต่อ...</div>
+
+    <button class="btn-large" onclick="sendCommand('toggle')">⏯️ Play / Pause</button>
+
+    <div class="row">
+        <button onclick="sendCommand('speed', -1)">🐢 ช้าลง</button>
+        <button onclick="sendCommand('speed', 1)">เร็วขึ้น 🐇</button>
+    </div>
+
+    <div class="row">
+        <button onclick="sendCommand('font-size', -1)">A-</button>
+        <button onclick="sendCommand('font-size', 1)">A+</button>
+    </div>
+
+    <div class="row">
+        <button onclick="sendCommand('mirror')">🪞 กลับด้าน</button>
+        <button onclick="sendCommand('reset')" style="background: #d32f2f;">🔄 เริ่มใหม่</button>
+    </div>
+
+    <script>
+        const BACKEND_URL = "https://teleprompter-09ku.onrender.com"; // URL ของคุณ
+        const socket = io(BACKEND_URL);
+
+        // ดึง Session ID จาก URL (?session=XXXX)
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session');
+        const statusEl = document.getElementById('status');
+
+        if (!sessionId) {
+            statusEl.innerText = "❌ ไม่พบรหัสห้อง (Session ID)";
+            statusEl.style.color = "red";
+        }
+
+        socket.on('connect', () => {
+            if (sessionId) {
+                socket.emit('join-session', sessionId);
+                statusEl.innerText = "✅ เชื่อมต่อกับห้อง: " + sessionId;
+                statusEl.style.color = "#4CAF50";
+            }
+        });
+
+        function sendCommand(cmd, val = 0) {
+            if (!sessionId) return alert("ไม่ได้เชื่อมต่อกับห้อง");
+            
+            // สั่นมือถือเมื่อกดปุ่ม (ถ้าทำได้)
+            if (navigator.vibrate) navigator.vibrate(50);
+
+            socket.emit('send-command', {
+                sessionId: sessionId,
+                command: cmd,
+                value: val
+            });
+        }
+    </script>
+</body>
+</html>
