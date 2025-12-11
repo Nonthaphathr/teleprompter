@@ -72,6 +72,27 @@
             gap: 15px;
             align-items: center;
             border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        
+        .align-btn {
+            background: #333;
+            border: 1px solid #555;
+            color: #aaa;
+            padding: 5px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .align-btn:hover {
+            background: #444;
+            border-color: var(--neon-blue);
+        }
+        .align-btn.active {
+            background: var(--neon-blue);
+            color: black;
+            border-color: var(--neon-blue);
         }
 
         /* ปุ่มสี */
@@ -92,6 +113,13 @@
             overflow-y: auto;
             color: white;
             line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        #script-input:empty:before {
+            content: "พิมพ์บทพูดของคุณที่นี่...\A\Aเคล็ดลับ:\A1. กด Enter เพื่อขึ้นบรรทัดใหม่\A2. ลากคลุมข้อความ แล้วเลือกสีด้านบน\A3. กดปุ่ม 'เริ่มระบบ' เมื่อพร้อม";
+            color: #555;
             white-space: pre-wrap;
         }
 
@@ -142,7 +170,14 @@
 
         #scrolling-text {
             position: absolute; top: 100%; left: 0; right: 0;
-            text-align: center; color: white;
+            color: white;
+            /* รักษาการวรรคและเคาะบรรทัด */
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            /* จัดข้อความให้สวยงาม */
+            padding: 0 10%;
+            line-height: 1.8;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
         .guide-line {
@@ -205,9 +240,14 @@
                 <div class="color-btn" style="background:#00ff41;" onmousedown="event.preventDefault(); setColor('#00ff41')" title="สีเขียว"></div>
                 <div class="color-btn" style="background:#00f3ff;" onmousedown="event.preventDefault(); setColor('#00f3ff')" title="สีฟ้า"></div>
                 <div class="color-btn" style="background:#ff0055;" onmousedown="event.preventDefault(); setColor('#ff0055')" title="สีแดง"></div>
+                
+                <span style="color:#aaa; margin-left: 20px;">จัดข้อความ:</span>
+                <button class="align-btn active" id="align-left" onclick="setAlignment('left')">◀ ซ้าย</button>
+                <button class="align-btn" id="align-center" onclick="setAlignment('center')">▣ กลาง</button>
+                <button class="align-btn" id="align-right" onclick="setAlignment('right')">▶ ขวา</button>
             </div>
 
-            <div id="script-input" contenteditable="true" placeholder="1. พิมพ์บทพูดที่นี่...&#10;2. ลากคลุมคำที่ต้องการเน้น แล้วกดปุ่มสีด้านบน&#10;3. กดปุ่ม 'เริ่มระบบ' ด้านล่าง"></div>
+            <div id="script-input" contenteditable="true"></div>
         </div>
 
         <div class="bottom-controls">
@@ -268,17 +308,37 @@
         let scrollSpeed = 2.0;
         let currentPosition = 0;
         let animationFrameId;
+        let textAlignment = 'left'; // เก็บค่าการจัดข้อความ
 
         // --- Editor Functions ---
         function setColor(color) {
             document.execCommand('foreColor', false, color);
         }
+        
+        function setAlignment(align) {
+            textAlignment = align;
+            // อัพเดตปุ่ม active
+            document.querySelectorAll('.align-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('align-' + align).classList.add('active');
+        }
 
         function startPrompter() {
-            const content = document.getElementById('script-input').innerHTML;
-            if (!document.getElementById('script-input').innerText.trim()) return alert("กรุณาใส่ข้อความก่อนครับ");
+            const editor = document.getElementById('script-input');
+            if (!editor.innerText.trim()) return alert("กรุณาใส่ข้อความก่อนครับ");
 
-            document.getElementById('scrolling-text').innerHTML = content;
+            // คัดลอกเนื้อหาพร้อมรักษาการจัดรูปแบบ
+            let content = editor.innerHTML;
+            
+            // แปลง <div> และ <br> ที่เกิดจาก contenteditable ให้เป็น line break ที่ถูกต้อง
+            content = content.replace(/<div>/gi, '\n');
+            content = content.replace(/<\/div>/gi, '');
+            content = content.replace(/<br\s*\/?>/gi, '\n');
+            
+            // ห่อด้วย span เพื่อให้รักษาสีและรูปแบบ
+            const scrollText = document.getElementById('scrolling-text');
+            scrollText.innerHTML = content;
+            scrollText.style.textAlign = textAlignment; // ตั้งค่าการจัดข้อความ
+            
             document.getElementById('prompter-container').style.fontSize = document.getElementById('input-font-size').value + "px";
             
             document.getElementById('editor-screen').style.display = 'none';
